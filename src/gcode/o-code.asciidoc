@@ -62,7 +62,7 @@ o100 endsub
 o100 call (call the subroutine here)
 M2
 ----
-See <<sec:G53-Move-in,G53>> & <<sec:G0,G0>> & <<sec:M2-M30,M2>> sections for more information.
+See <<sec_G53-Move-in,G53>> & <<sec:G0,G0>> & <<sec:M2-M30,M2>> sections for more information.
 
 .O- Return
 Inside a subroutine, 'O- return' can be executed. This immediately

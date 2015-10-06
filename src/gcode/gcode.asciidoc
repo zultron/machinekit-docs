@@ -82,7 +82,7 @@ as the 'L number', and so on for any other letter.
 |<<sec:G43,G43>>                    |Use Tool Length Offset from Tool Table
 |<<sec:G43_1,G43.1>>                |Dynamic Tool Length Offset
 |<<sec:G49-Tool,G49>>               |Cancel Tool Length Offset
-|<<sec:G53-Move-in,G53>>            |Motion in Machine Coordinate System
+|<<sec_G53-Move-in,G53>>            |Motion in Machine Coordinate System
 |<<sec:G54-G59_3,G54-G59>>          |Select Coordinate System (1 - 6)
 |<<sec:G54-G59_3,G59.1-G59.3>>      |Select Coordinate System (7 - 9)
 |<<sec:G61-G61_1,G61 G61.1>>        |Path Control Mode
@@ -144,7 +144,7 @@ If cutter compensation is active, the motion will differ from
 the above; see the <<sec:cutter-compensation,Cutter Compensation>> Section.
 
 If 'G53' is programmed on the same line, the motion will also differ;
-see the <<sec:G53-Move-in,G53>> Section for more information.
+see the <<sec_G53-Move-in,G53>> Section for more information.
 
 The path of a G0 rapid motion can be rounded at direction changes and depends
 on the <<sec:trajectory-control,trajectory control>> settings and maximum
@@ -184,7 +184,7 @@ If cutter compensation is active, the motion will differ from
 the above; see the <<sec:cutter-compensation,Cutter Compensation>> Section.
 
 If 'G53' is programmed on the same line, the motion will also differ;
-see the <<sec:G53-Move-in,G53>> Section for more information.
+see the <<sec_G53-Move-in,G53>> Section for more information.
 
 It is an error if:
 
@@ -1243,7 +1243,7 @@ It is OK to program using the same offset already in use. It is also
 OK to program using no tool length offset if none is currently being
 used.
 
-[[sec:G53-Move-in]]
+[[sec_G53-Move-in]]
 == G53 Move in Machine Coordinates
 (((G53 Machine Coordinates)))
 
