@@ -1,7 +1,7 @@
 :lang: fr
 :toc:
 
-= Tout le G-code de Machinekit
+= Tout le G-code de LinuxCNC
 
 [[cha:Le-G-code]] (((Le G-code)))
 
@@ -56,8 +56,10 @@ chose.
 |<<sec:G1,G1>> | Interpolation linéaire en vitesse travail
 |<<sec:G2-G3,G2/G3>>  | Interpolation circulaire sens horaire/anti-horaire
 |<<sec:G4-Tempo,G4>>           | Temporisation
-|<<sec:G5_1-B-spline,G5.1>>    | B-Spline quadratique
-|<<sec:G5_2-G5_3-NURBs,G5.2 G5.3>>    | NURBs Block '(expérimental)'
+|<<sec:G5-Cubic-Spline,G5>>         |Spline cubique
+|<<sec:G5_1-Quadratic-Spline,G5.1>> |B-Spline quadratique
+|<<sec:G5_2-G5_3-NURBS,G5.2>>       |NURBS, ajout point de contrôle
+|<<sec:G5_2-G5_3-NURBS,G5.3>>       |NURBS, exécute
 |<<sec:G7-Mode-diametre,G7>>   | Mode diamètre (sur les tours)
 |<<sec:G8-Mode-rayon,G8>>| Mode rayon (sur les tours)
 |<<sec:G10-L1,G10 L1>>   | Ajuste les valeurs de l'outil en table d'outils
@@ -500,68 +502,132 @@ C'est une erreur si:
 
 * Le nombre P est négatif ou n'est pas spécifié.
 
-[[sec:G5_1-B-spline]]
-== G5.1 B-spline quadratique
-(((G5.1 B-spline quadratique)))
+[[sec:G5-Cubic-Spline]]
+== G5 Spline cubique
+(((G5 Cubic spline)))
 
 ----
-G5.1 Xn Yn I[X offset] J[Y offset]
+G5 X- Y- <I- J-> P- Q-
+----
+* 'I' - offset incrémental en X, du point de départ au premier point de contrôle
+* 'J' - offset incrémental en Y, du point de départ au premier point de contrôle
+* 'P' - offset incrémental en X, du point de départ au second point de contrôle
+* 'Q' - offset incrémental en Y, du point de départ au second point de contrôle
+
+G5 crée une B-spline cubique dans le plan XY avec les axes X et Y seuls.
+P et Q doivent être tous les deux spécifiés pour chaque commande G5.
+
+Pour la première d'une série de commandes G5, I et J doivent être tous les deux
+spécifiés. Pour les commandes G5 suivantes de la série, soit I et J sont
+spécifiés tous les deux, soit aucun ne l'est. Si aucun n'est spécifié, la
+direction de départ de ce cube rejoindra automatiquement la direction de fin du
+cube précédent (comme si I et J étaient les négatifs des P et Q précédents).
+
+Par exemple, pour programmer une courbe en forme de N:
+
+.G5 Simple spline cubique initiale
+----
+G90 G17
+G0 X0 Y0
+G5 I0 J3 P0 Q-3 X1 Y1
 ----
 
-* 'I' - offset en X
-* 'J' - offset en Y
+Une seconde courbe en N qui s'attache doucement à celle-ci peux maintenant être
+faite sans spécifier I et J:
 
-G5.1 crée une B-spline quadratique dans le plan XY avec seulement les axes X
-et Y.
+.G5 Simple spline cubique subséquente
+----
+G5 P0 Q-3 X2 Y2
+----
 
 C'est une erreur si:
 
-* Les offsets I et J ne sont pas spécifiés
+* P et Q ne sont pas spécifiés tous les deux
+* Un seul, de I ou J est spécifié
+* Aucun de I ou J n'est spécifié à la première série de commandes G5
 * Un axe autre que X ou Y est spécifié
+* Le plan courant n'est pas G17
+
+[[sec:G5_1-Quadratic-Spline]]
+== G5.1 Spline quadratique
+(((G5.1 Quadratic spline)))
+
+----
+G5.1 X- Y- I- J-
+----
+* 'I' - Offset incrémental en X, du point de départ au point de contrôle
+* 'J' - Offset incrémental en Y, du point de départ au point de contrôle
+
+G5.1 crée une B-spline quadratique dans le plan XY avec les seuls axes X et Y.
+Ne pas spécifier I ou J donne un offset nul pour l'axe non spécifié,
+un ou les deux doivent donc être donnés.
+
+Par exemple, pour programmer une parabole, entre l'origine X-2 Y4 et X2 Y4:
+
+.G5.1 Simple spline quadratique
+----
+G90 G17
+G0 X-2 Y4
+G5.1 X2 I2 J-8
+----
+
+C'est une erreur si:
+
+* Les offsets I et J ne sont pas spécifiés ou sont à zéro
+* Un autre axe que X ou Y est spécifié
 * Le plan actif n'est pas G17
 
-[[sec:G5_2-G5_3-NURBs]]
-== G5.2 G5.3 NURBs Block
-(((G5.2 G5.3 NURBs Block)))
+[[sec:G5_2-G5_3-NURBS]]
+== G5.2 G5.3 Block NURBS
+(((G5.2 G5.3 NURBS Block)))
+
+----
+G5.2 <P-> <X- Y-> <L->
+X- Y- <P->
+...
+G5.3
+----
 
 WARNING: G5.2, G5.3 sont expérimentaux, il n'ont pas encore été testés
 totalement.
 
-G5.2 is for opening the data block defining a NURBs and G5.3 for
-closing the data block. In the lines between these two codes the curve
-control points are defined with both their related "weights" (P) and
-their parameter (L) which determines the order of the curve (k) and
-subsequently its degree (k-1).
+G5.2 est pour ouvrir un bloc de données définissant un NURBS et G5.3 pour
+fermer le bloc de données. Dans les lignes entre ces deux codes, les points de
+contrôle de la courbe sont définis avec deux éléments, leur 'poids' relatif (P)
+et le paramètre (L) qui détermine l'ordre de la courbe.
 
-Using this curve definition the knots of the NURBs curve are not
-defined by the user they are calculated by the inside algorithm, in the
-same way as it happens in a great number of graphic applications, where
-the curve shape can be modified only acting on either control points or
-weights.
+Les coordonnées courantes, avant la premiére commande G5.2, est toujours prise
+comme premier point de contrôle du NURBS. Pour définir le poids pour le
+premier point de contrôle, premièrement programmer G5.2 P- sans donner X ni Y.
 
-Sample NURBs Code
+Le poids par défaut si P n'est pas spécifié est 1. L'ordre par défaut si L n'est
+pas spécifié est 3.
+
+.G5.2 Exemple
 ----
-    G0 X0 Y0
-    F10 
-    G5.2 X0 Y1 P1 L3
-         X2 Y2 P1
-         X2 Y0 P1
-         X0 Y0 P2
-    G5.3
-    / The rapid moves show the same path without the NURBs Block
-    G0 X0 Y1
-       X2 Y2
-       X2 Y0
-       X0 Y0
-    M2
+G0 X0 Y0 (mouvement en vitesse rapide)
+F10 (set feed rate)
+G5.2 P1 L3
+     X0 Y1 P1
+     X2 Y2 P1
+     X2 Y0 P1
+     X0 Y0 P2
+G5.3
+; Les mouvements en vitesse rapide montrent le même parcours sans le bloc NURBS
+G0 X0 Y1
+   X2 Y2
+   X2 Y0
+   X0 Y0
+M2
 ----
 
-.Sample NURBs Output
+.Simple sortie NURBS
 
-image::images/nurbs01.png[]
+image:images/nurbs01.png[align="center"]
 
-http://wiki.machinekit.org/cgi-bin/wiki.pl?NURBS[D'autres informations sont
-disponible ici, sur le wiki].
+D'autres informations sur NURBS sont disponibles ici:
+
+http://wiki.linuxcnc.org/cgi-bin/wiki.pl?NURBS[http://wiki.linuxcnc.org/cgi-bin/wiki.pl?NURBS]
 
 [[sec:G7-Mode-diametre]]
 == G7 Mode diamètre sur les tours
@@ -676,8 +742,8 @@ coordonnées.
 * Quand un mouvement de rotation est en cours, jogger un axe, déplacera celui-ci
 seulement dans le sens négatif ou positif et non pas le long de l'axe de
 rotation.
-* Si un décalage d'origine créé avec 'G92' est actif avant la commande 'G10 L2',
-il reste actif après.
+* Si un décalage d'origine créé avec 'G92' ou 'G92' est actif avant la
+commande 'G10 L2', il reste actif après.
 * Le système de coordonnées dont l'origine est définie par la commande 'G10'
 peut être actif ou non au moment de l'exécution de 'G10'. Si il est actif à
 ce moment là, les nouvelles coordonnées prennent effet immédiatement.
@@ -723,7 +789,7 @@ G10 L10 P- axes <R- I- J- Q->
 
 G10 L10 modifie les valeurs de l'outil 'P' dans la table d'outils, de sorte
 que si la compensation d'outil est rechargée, avec la machine à la position
-courante et avec les G5x et G92 actifs, les coordonnées courantes pour
+courante et avec les G5x et G52/G92 actifs, les coordonnées courantes pour
 l'axe spécifié deviendront les coordonnées spécifiées. Les axes non spécifiés
 dans la commande G10 L10 ne seront pas modifiés.
 
@@ -760,7 +826,7 @@ G10 L11 est identique à G10 L10 excepté qu'au lieux de fixer les valeurs
 par rapport aux décalages de coordonnées courants, il les fixe de sorte que les
 coordonnées courantes deviennent celles spécifiées par les paramètres si la
 nouvelle compensation d'outil est rechargée et que la machine est placée dans
-le système de coordonnées G59.3, système sans aucun décalage G92 actif.
+le système de coordonnées G59.3, système sans aucun décalage G52/G92 actif.
 
 Ceci permet à l'utilisateur de fixer le système de coordonnées G59.3 à
 un point fixe de la machine et d'utiliser cet emplacement pour mesurer
@@ -929,7 +995,7 @@ l'axe Z si les points d'arrivée des axes X et Y sont utilisés, par exemple pou
 réaliser un filetage conique.
 
 .Informations techniques[[g33-tech-info]]
-Au début de chaque passe G33, Machinekit utilise la vitesse de broche et les
+Au début de chaque passe G33, LinuxCNC utilise la vitesse de broche et les
 limites d'accélération de la machine pour calculer combien de temps prendra Z
 pour accélérer après chaque impulsion d'index et détermine de combien de degrés
 la broche tournera pendant ce temps là. Il ajoute alors cet angle à la position
@@ -1045,7 +1111,7 @@ erreur en cas de défaut.
 
 [IMPORTANT]
 Cette commande n'est pas utilisable si la machine n'a pas été configurée pour
-exploiter un signal de sonde entre HAL et Machinekit.
+exploiter un signal de sonde entre HAL et LinuxCNC.
 Le signal de la sonde doit être envoyé sur une broche d'entrée puis transmis à
 'motion.probe-entrée (bit, In)'. G38.x utilise la valeur de cette broche pour
 déterminer quand la sonde a touché ou perdu le contact. TRUE si le contact de
@@ -1945,7 +2011,7 @@ C'est une erreur si:
 == G84 Cycle de taraudage à droite
 (((G84 Cycle de taraudage)))
 
-Ce code n'est pas encore implémenté dans Machinekit. Il est accepté mais son
+Ce code n'est pas encore implémenté dans LinuxCNC. Il est accepté mais son
 comportement n'est pas défini. Voir le <<sec:G33_1-Taraudage-rigide, taraudage
 rigide>>.
 
@@ -1994,14 +2060,14 @@ erreur si:
 == G87 Alésage inverse
 (((G87 Alésage inverse)))
 
-Ce code n'est pas encore implémenté dans Machinekit. Il est accepté mais son
+Ce code n'est pas encore implémenté dans LinuxCNC. Il est accepté mais son
 comportement n'est pas défini.
 
 [[sec:G88-Alesage-Retrait-Manuel-Out]]
 == G88 Alésage, arrêt de broche, retrait en manuel
 (((G88 Cycle d'alésage)))
 
-Ce code n'est pas encore implémenté dans Machinekit. Il est accepté mais son
+Ce code n'est pas encore implémenté dans LinuxCNC. Il est accepté mais son
 comportement n'est pas défini.
 
 [[sec:G89-Alesage-Tempo]]
@@ -2151,7 +2217,7 @@ C'est une erreur si:
 
 * Tous les mots d'axes sont omis.
 
-Machinekit conserve les décalages G92 et les réutilise au prochain démarrage
+LinuxCNC conserve les décalages G92 et les réutilise au prochain démarrage
 du logiciel. Pour éviter cela, programmer un 'G92.1' qui les effacera, ou
 un G92.2 qui supprimera les valeurs enregistrées.
 
@@ -2232,7 +2298,7 @@ si G20 est actif, ou 'S' mètres par minute, si G21 est actif. D- est facultatif
 +
 Lorsque 'G96' est utilisé, s'assurer que 'X0' dans le système de coordonnées
 en cours (y compris les compensations d'outils) est bien le centre de
-rotation, sinon Machinekit ne donnera pas la vitesse de broche désirée.
+rotation, sinon LinuxCNC ne donnera pas la vitesse de broche désirée.
 'G96' n'est pas affecté par les mode rayon ou diamètre.
 
 * 'G97' - Vitesse de coupe en tr/mn.
